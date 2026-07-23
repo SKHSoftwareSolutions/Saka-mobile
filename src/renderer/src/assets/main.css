@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  }
+}
+
+/* ─── Print slips — hidden on screen, visible when printing ─────────────── */
+.purchase-slip,
+.sale-receipt {
+  display: none;
+}
+
+.slip-content {
+  max-width: 320px;
+  margin: 0 auto;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.receipt-content {
+  max-width: 360px;
+  margin: 0 auto;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+@media print {
+  body > *:not(.purchase-slip):not(.sale-receipt) {
+    display: none !important;
+  }
+
+  .purchase-slip,
+  .sale-receipt {
+    display: block !important;
+    position: fixed;
+    inset: 0;
+    background: white;
+    padding: 24px;
+    z-index: 9999;
+  }
+}
