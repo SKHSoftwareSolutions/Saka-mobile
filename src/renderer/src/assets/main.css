@@ -10,7 +10,8 @@
 
 /* ─── Print slips — hidden on screen, visible when printing ─────────────── */
 .purchase-slip,
-.sale-receipt {
+.sale-receipt,
+.sale-invoice {
   display: none;
 }
 
@@ -26,8 +27,14 @@
   font-family: 'Courier New', Courier, monospace;
 }
 
+.invoice-content {
+  max-width: 700px;
+  margin: 0 auto;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
 @media print {
-  body > *:not(.purchase-slip):not(.sale-receipt) {
+  body > *:not(.purchase-slip):not(.sale-receipt):not(.sale-invoice) {
     display: none !important;
   }
 
@@ -38,6 +45,15 @@
     inset: 0;
     background: white;
     padding: 24px;
+    z-index: 9999;
+  }
+
+  .sale-invoice {
+    display: block !important;
+    position: fixed;
+    inset: 0;
+    background: white;
+    padding: 32px;
     z-index: 9999;
   }
 }

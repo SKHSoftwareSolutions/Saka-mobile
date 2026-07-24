@@ -2,8 +2,9 @@ import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { useProducts } from '../hooks/useProducts'
 import { usePhones } from '../hooks/usePhones'
 import { useCustomers } from '../hooks/useCustomers'
+import { useSettings } from '../hooks/useSettings'
 import { formatPKR } from '../../../shared/format'
-import type { SaleInput } from '../../../shared/api-types'
+import type { SaleInput, SaleRow, SaleItemRow } from '../../../shared/api-types'
 
 interface CartItem {
   id: string
@@ -22,6 +23,15 @@ const PAYMENT_LABELS: Record<string, string> = {
   jazzcash: 'JazzCash',
   easypaisa: 'EasyPaisa',
   udhaar: 'Udhaar (Credit)'
+}
+
+function ReceiptRow({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
+  return (
+    <div className="flex justify-between gap-4">
+      <span className="text-sm text-gray-500">{label}</span>
+      <span className={`text-sm text-right ${bold ? 'font-bold' : ''}`}>{value}</span>
+    </div>
+  )
 }
 
 function SearchIcon() {
@@ -91,6 +101,7 @@ export default function NewSale(): JSX.Element {
   const { data: products, loading: loadingProducts } = useProducts()
   const { data: phones, loading: loadingPhones } = usePhones()
   const { data: customers } = useCustomers()
+  const { data: settings } = useSettings()
 
   const [cart, setCart] = useState<CartItem[]>([])
   const [search, setSearch] = useState('')
@@ -103,7 +114,9 @@ export default function NewSale(): JSX.Element {
   const [newCustomerPhone, setNewCustomerPhone] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState(false)
+  const [completedSale, setCompletedSale] = useState<SaleRow | null>(null)
+  const [completedItems, setCompletedItems] = useState<SaleItemRow[]>([])
+  const [completedCustomer, setCompletedCustomer] = useState('Walk-in')
 
   const discountPaisa = useMemo(() => {
     const n = parseFloat(discountRupees)
@@ -211,14 +224,14 @@ export default function NewSale(): JSX.Element {
         setError(res.error)
         return
       }
-      setSuccess(true)
-      setTimeout(() => {
-        setCart([])
-        setSelectedCustomer(null)
-        setDiscountRupees('')
-        setPaymentMethod('cash')
-        setSuccess(false)
-      }, 2000)
+      const sale = res.data
+      const itemsRes = await window.api.sales.getItems(sale.id)
+      const custName = selectedCustomer && customers
+        ? customers.find((c) => c.id === selectedCustomer)?.name ?? 'Walk-in'
+        : 'Walk-in'
+      setCompletedSale(sale)
+      setCompletedItems(itemsRes.success ? itemsRes.data : [])
+      setCompletedCustomer(custName)
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
     } finally {
@@ -238,17 +251,90 @@ export default function NewSale(): JSX.Element {
     )
   }
 
-  if (success) {
+  if (completedSale) {
+    const handleNewSale = () => {
+      setCart([])
+      setSelectedCustomer(null)
+      setDiscountRupees('')
+      setPaymentMethod('cash')
+      setCompletedSale(null)
+      setCompletedItems([])
+    }
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <div className="w-16 h-16 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
-            <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
+      <div className="space-y-4">
+        {/* Printable receipt (hidden on screen) */}
+        <div className="sale-receipt">
+          <div className="receipt-content">
+            <div className="text-center mb-6">
+              <h1 className="text-xl font-bold text-gray-900">{settings?.shopName || 'SAKA MOBILES'}</h1>
+              <p className="text-sm text-gray-500">Sales Receipt</p>
+            </div>
+            <div className="border-t border-b border-gray-300 py-4 mb-4 space-y-2">
+              <ReceiptRow label="Receipt" value={completedSale.receipt_number} />
+              <ReceiptRow label="Date" value={new Date(completedSale.created_at).toLocaleString('en-PK')} />
+              <ReceiptRow label="Customer" value={completedCustomer} />
+              <ReceiptRow label="Payment" value={PAYMENT_LABELS[completedSale.payment_method] ?? completedSale.payment_method} />
+            </div>
+            <div className="border-b border-gray-300 pb-4 mb-4">
+              <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Items</p>
+              <div className="space-y-2">
+                {completedItems.map((item) => (
+                  <div key={item.id} className="flex justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm truncate">{item.description}</p>
+                      <p className="text-xs text-gray-500">{item.quantity} x {formatPKR(item.unit_price_paisa)}</p>
+                    </div>
+                    <span className="text-sm font-medium shrink-0">{formatPKR(item.line_total_paisa)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-1 mb-4">
+              <ReceiptRow label="Subtotal" value={formatPKR(completedSale.subtotal_paisa)} />
+              {completedSale.discount_paisa > 0 && (
+                <ReceiptRow label="Discount" value={`-${formatPKR(completedSale.discount_paisa)}`} />
+              )}
+              <div className="border-t border-gray-300 pt-2 mt-2">
+                <ReceiptRow label="TOTAL" value={formatPKR(completedSale.total_paisa)} bold />
+              </div>
+            </div>
+            {settings?.receiptFooter && (
+              <div className="mt-6 pt-4 border-t border-gray-300">
+                <p className="text-xs text-gray-500 text-center whitespace-pre-line">{settings.receiptFooter}</p>
+              </div>
+            )}
           </div>
-          <h2 className="text-xl font-bold text-gray-900">Sale Completed!</h2>
-          <p className="text-gray-500 text-sm mt-1">Total: {formatPKR(totalPaisa)}</p>
+        </div>
+
+        {/* On-screen completion view */}
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <div className="w-16 h-16 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
+              <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h2 className="text-xl font-bold text-gray-900">Sale Completed!</h2>
+            <p className="text-gray-500 text-sm mt-1">Receipt: {completedSale.receipt_number}</p>
+            <p className="text-gray-900 font-bold text-lg mt-2">{formatPKR(completedSale.total_paisa)}</p>
+            <div className="flex gap-3 justify-center mt-6">
+              <button
+                onClick={() => window.print()}
+                className="h-11 px-6 rounded-lg bg-primary-600 text-sm font-medium text-white hover:bg-primary-700 flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                </svg>
+                Print Receipt
+              </button>
+              <button
+                onClick={handleNewSale}
+                className="h-11 px-6 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                New Sale
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     )

@@ -56,7 +56,7 @@ export default function Login({ onLogin }: LoginProps): JSX.Element {
               />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Mobile Hub POS</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Saka Mobiles</h1>
           <p className="text-gray-500 text-sm mt-1">Sign in to continue</p>
         </div>
 

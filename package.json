@@ -1,9 +1,9 @@
 {
-  "name": "mobile-hub-pos",
-  "version": "0.1.0",
-  "description": "Mobile Hub POS — Offline Desktop POS & Inventory Management System for Mobile Phone Shops",
+  "name": "saka-mobiles",
+  "version": "1.0.0",
+  "description": "Saka Mobiles — Offline Desktop POS & Inventory Management System for Mobile Phone Shops",
   "main": "./out/main/index.js",
-  "author": "Saka Mobile",
+  "author": "Saka Mobiles",
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
@@ -17,9 +17,9 @@
     "package:dir": "electron-builder --win --dir"
   },
   "build": {
-    "appId": "com.sakamobile.mobilehubpos",
-    "productName": "Mobile Hub POS",
-    "copyright": "Copyright © 2026 Saka Mobile",
+    "appId": "com.sakamobiles.pos",
+    "productName": "Saka Mobiles",
+    "copyright": "Copyright © 2026 Saka Mobiles",
     "directories": {
       "output": "release",
       "buildResources": "build"
@@ -34,18 +34,14 @@
           "target": "nsis",
           "arch": ["x64"]
         }
-      ],
-      "icon": "build/icon.ico"
+      ]
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "installerIcon": "build/icon.ico",
-      "uninstallerIcon": "build/icon.ico",
-      "installerHeaderIcon": "build/icon.ico",
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Mobile Hub POS",
+      "shortcutName": "Saka Mobiles",
       "installerLanguages": ["en_US"],
       "language": "1033"
     }

@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { useSales, useSaleItems } from '../hooks/useSales'
 import { useCustomers } from '../hooks/useCustomers'
+import { useSettings } from '../hooks/useSettings'
 import { formatPKR } from '../../../shared/format'
 import type { SaleRow, SaleItemRow } from '../../../shared/api-types'
 
@@ -173,17 +174,21 @@ function Modal({
 function SaleReceipt({
   sale,
   customerName,
-  items
+  items,
+  shopName,
+  receiptFooter
 }: {
   sale: SaleRow
   customerName: string
   items: SaleItemRow[]
+  shopName?: string
+  receiptFooter?: string
 }) {
   return (
     <div className="sale-receipt">
       <div className="receipt-content">
         <div className="text-center mb-6">
-          <h1 className="text-xl font-bold text-gray-900">MOBILE HUB POS</h1>
+          <h1 className="text-xl font-bold text-gray-900">{shopName || 'SAKA MOBILES'}</h1>
           <p className="text-sm text-gray-500">Sales Receipt</p>
         </div>
 
@@ -223,6 +228,12 @@ function SaleReceipt({
           </div>
         </div>
 
+        {receiptFooter && (
+          <div className="mt-6 pt-4 border-t border-gray-300">
+            <p className="text-xs text-gray-500 text-center whitespace-pre-line">{receiptFooter}</p>
+          </div>
+        )}
+
         <div className="flex justify-between mt-16 pt-4 border-t border-gray-300">
           <div className="text-center">
             <div className="w-40 border-t border-gray-400 mt-12 pt-1">
@@ -234,6 +245,130 @@ function SaleReceipt({
               <p className="text-xs text-gray-500">Authorized Signature</p>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Sale Invoice (print) ──────────────────────────────────────────────────
+
+function SaleInvoice({
+  sale,
+  customerName,
+  items,
+  shopName,
+  receiptFooter
+}: {
+  sale: SaleRow
+  customerName: string
+  items: SaleItemRow[]
+  shopName?: string
+  receiptFooter?: string
+}) {
+  return (
+    <div className="sale-invoice">
+      <div className="invoice-content">
+        {/* Invoice Header */}
+        <div className="text-center mb-8 pb-4 border-b-2 border-gray-900">
+          <h1 className="text-2xl font-bold text-gray-900">{shopName || 'SAKA MOBILES'}</h1>
+          <p className="text-sm text-gray-500 mt-1">Sales Invoice</p>
+        </div>
+
+        {/* Invoice Meta */}
+        <div className="grid grid-cols-2 gap-6 mb-8">
+          <div>
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Bill To</h3>
+            <p className="text-sm font-medium text-gray-900">{customerName}</p>
+          </div>
+          <div className="text-right">
+            <div className="space-y-1">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">Invoice #:</span>
+                <span className="font-mono font-medium text-gray-900">{sale.receipt_number}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">Date:</span>
+                <span className="text-gray-900">{formatDateTime(sale.created_at)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">Payment:</span>
+                <span className="text-gray-900">{PAYMENT_LABELS[sale.payment_method] ?? sale.payment_method}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Items Table */}
+        <div className="mb-8">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b-2 border-gray-900">
+                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider pb-2 pr-4">#</th>
+                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider pb-2 pr-4">Description</th>
+                <th className="text-center text-xs font-semibold text-gray-500 uppercase tracking-wider pb-2 pr-4">Qty</th>
+                <th className="text-right text-xs font-semibold text-gray-500 uppercase tracking-wider pb-2 pr-4">Unit Price</th>
+                <th className="text-right text-xs font-semibold text-gray-500 uppercase tracking-wider pb-2">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item, index) => (
+                <tr key={item.id} className="border-b border-gray-200">
+                  <td className="py-3 pr-4 text-sm text-gray-600">{index + 1}</td>
+                  <td className="py-3 pr-4 text-sm font-medium text-gray-900">{item.description}</td>
+                  <td className="py-3 pr-4 text-sm text-gray-600 text-center">{item.quantity}</td>
+                  <td className="py-3 pr-4 text-sm text-gray-600 text-right">{formatPKR(item.unit_price_paisa)}</td>
+                  <td className="py-3 text-sm font-medium text-gray-900 text-right">{formatPKR(item.line_total_paisa)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Totals */}
+        <div className="flex justify-end mb-8">
+          <div className="w-72 space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-500">Subtotal:</span>
+              <span className="text-gray-900">{formatPKR(sale.subtotal_paisa)}</span>
+            </div>
+            {sale.discount_paisa > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">Discount:</span>
+                <span className="text-red-600">-{formatPKR(sale.discount_paisa)}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-base font-bold border-t-2 border-gray-900 pt-2">
+              <span className="text-gray-900">Total:</span>
+              <span className="text-gray-900">{formatPKR(sale.total_paisa)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        {receiptFooter && (
+          <div className="mt-8 pt-4 border-t border-gray-300">
+            <p className="text-xs text-gray-500 text-center whitespace-pre-line">{receiptFooter}</p>
+          </div>
+        )}
+
+        {/* Signatures */}
+        <div className="flex justify-between mt-20 pt-4 border-t border-gray-300">
+          <div className="text-center">
+            <div className="w-48 border-t border-gray-400 mt-12 pt-1">
+              <p className="text-xs text-gray-500">Customer Signature</p>
+            </div>
+          </div>
+          <div className="text-center">
+            <div className="w-48 border-t border-gray-400 mt-12 pt-1">
+              <p className="text-xs text-gray-500">Authorized Signature</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Invoice Number Footer */}
+        <div className="mt-8 text-center">
+          <p className="text-xs text-gray-400">Invoice #{sale.receipt_number} | Generated by {shopName || 'Saka Mobiles'}</p>
         </div>
       </div>
     </div>
@@ -263,12 +398,14 @@ function SaleDetailModal({
   sale,
   customerName,
   onClose,
-  onPrint
+  onPrint,
+  onInvoice
 }: {
   sale: SaleRow
   customerName: string
   onClose: () => void
   onPrint: () => void
+  onInvoice: () => void
 }) {
   const { data: items, loading } = useSaleItems(sale.id)
 
@@ -358,7 +495,16 @@ function SaleDetailModal({
               className="h-11 px-5 rounded-lg bg-primary-600 text-sm font-medium text-white hover:bg-primary-700 flex items-center gap-2"
             >
               <PrinterIcon />
-              Reprint Receipt
+              Print Receipt
+            </button>
+            <button
+              onClick={onInvoice}
+              className="h-11 px-5 rounded-lg border border-primary-300 text-sm font-medium text-primary-700 hover:bg-primary-50 flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Generate Invoice
             </button>
             <button
               onClick={onClose}
@@ -410,6 +556,7 @@ type DateFilter = 'all' | 'today' | 'week' | 'month' | 'custom'
 export default function SalesHistory(): JSX.Element {
   const { data: sales, loading, error, refetch } = useSales()
   const { data: customers } = useCustomers()
+  const { data: settings } = useSettings()
 
   const [search, setSearch] = useState('')
   const [paymentFilter, setPaymentFilter] = useState<string>('All')
@@ -419,6 +566,8 @@ export default function SalesHistory(): JSX.Element {
   const [detailSale, setDetailSale] = useState<SaleRow | null>(null)
   const [printTarget, setPrintTarget] = useState<SaleRow | null>(null)
   const [printItems, setPrintItems] = useState<SaleItemRow[]>([])
+  const [invoiceTarget, setInvoiceTarget] = useState<SaleRow | null>(null)
+  const [invoiceItems, setInvoiceItems] = useState<SaleItemRow[]>([])
   const [sortAsc, setSortAsc] = useState(false)
 
   // Customer name lookup
@@ -538,6 +687,26 @@ export default function SalesHistory(): JSX.Element {
     return () => clearTimeout(timer)
   }, [printTarget])
 
+  const handleInvoice = useCallback(async (sale: SaleRow) => {
+    try {
+      const res = await window.api.sales.getItems(sale.id)
+      setInvoiceItems(res.success ? res.data : [])
+    } catch {
+      setInvoiceItems([])
+    }
+    setInvoiceTarget(sale)
+  }, [])
+
+  useEffect(() => {
+    if (!invoiceTarget) return
+    const timer = setTimeout(() => {
+      window.print()
+      setInvoiceTarget(null)
+      setInvoiceItems([])
+    }, 200)
+    return () => clearTimeout(timer)
+  }, [invoiceTarget])
+
   // ── Loading ─────────────────────────────────────────────────────────────
   if (loading) {
     return (
@@ -578,6 +747,19 @@ export default function SalesHistory(): JSX.Element {
           sale={printTarget}
           customerName={getCustomerName(printTarget)}
           items={printItems}
+          shopName={settings?.shopName}
+          receiptFooter={settings?.receiptFooter}
+        />
+      )}
+
+      {/* Print invoice (hidden) */}
+      {invoiceTarget && (
+        <SaleInvoice
+          sale={invoiceTarget}
+          customerName={getCustomerName(invoiceTarget)}
+          items={invoiceItems}
+          shopName={settings?.shopName}
+          receiptFooter={settings?.receiptFooter}
         />
       )}
 
@@ -749,6 +931,7 @@ export default function SalesHistory(): JSX.Element {
           customerName={getCustomerName(detailSale)}
           onClose={() => setDetailSale(null)}
           onPrint={() => handlePrint(detailSale)}
+          onInvoice={() => handleInvoice(detailSale)}
         />
       )}
     </div>

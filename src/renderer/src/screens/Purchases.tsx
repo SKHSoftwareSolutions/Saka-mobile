@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { usePurchasesWithPhone } from '../hooks/usePurchases'
+import { useSettings } from '../hooks/useSettings'
 import { formatPKR } from '../../../shared/format'
 import type { PurchaseWithPhone, PurchaseWithPhoneInput } from '../../../shared/api-types'
 
@@ -560,12 +561,12 @@ function DetailRow({
 
 // ─── Print Slip ─────────────────────────────────────────────────────────────
 
-function PurchaseSlip({ purchase }: { purchase: PurchaseWithPhone }) {
+function PurchaseSlip({ purchase, shopName }: { purchase: PurchaseWithPhone; shopName?: string }) {
   return (
     <div className="purchase-slip">
       <div className="slip-content">
         <div className="text-center mb-6">
-          <h1 className="text-xl font-bold text-gray-900">MOBILE HUB POS</h1>
+          <h1 className="text-xl font-bold text-gray-900">{shopName || 'SAKA MOBILES'}</h1>
           <p className="text-sm text-gray-500">Purchase Slip</p>
         </div>
 
@@ -629,6 +630,7 @@ function SlipRow({
 
 export default function Purchases(): JSX.Element {
   const { data: purchases, loading, error, refetch } = usePurchasesWithPhone()
+  const { data: settings } = useSettings()
   const [search, setSearch] = useState('')
   const [formOpen, setFormOpen] = useState(false)
   const [detailPurchase, setDetailPurchase] = useState<PurchaseWithPhone | null>(null)
@@ -709,7 +711,7 @@ export default function Purchases(): JSX.Element {
   return (
     <div className="space-y-4">
       {/* Print slip (hidden, rendered only for print) */}
-      {printTarget && <PurchaseSlip purchase={printTarget} />}
+      {printTarget && <PurchaseSlip purchase={printTarget} shopName={settings?.shopName} />}
 
       {/* Header */}
       <div className="flex items-center justify-between">

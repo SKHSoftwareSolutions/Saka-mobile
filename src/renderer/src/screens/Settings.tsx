@@ -409,7 +409,7 @@ export default function Settings(): JSX.Element {
               type="text"
               value={shopName}
               onChange={(e) => setShopName(e.target.value)}
-              placeholder="e.g. Mobile Hub"
+              placeholder="e.g. Saka Mobiles"
               className={inputClass}
             />
           </div>

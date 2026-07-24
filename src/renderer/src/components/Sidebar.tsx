@@ -16,7 +16,7 @@ function Sidebar({ links, onLogout }: SidebarProps): JSX.Element {
     <aside className="w-sidebar bg-primary-800 text-white flex flex-col shrink-0">
       {/* Brand */}
       <div className="px-5 py-6 border-b border-primary-700">
-        <h1 className="text-xl font-bold tracking-tight">Mobile Hub POS</h1>
+        <h1 className="text-xl font-bold tracking-tight">Saka Mobiles</h1>
         <p className="text-primary-200 text-sm mt-0.5">Phone Shop Management</p>
       </div>
 
